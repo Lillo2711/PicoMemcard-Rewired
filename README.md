@@ -158,7 +158,7 @@ Ha Thach
 
 ## Author
 
-Jose Alberonisse Lima Moreira  
+Alber Multi House  
 Brazil – 2026  
 
 Simplified Fork Edition
