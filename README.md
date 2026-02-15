@@ -2,7 +2,7 @@
 
 This project is a simplified and hardware-oriented fork of the original PicoMemcard by Daniele Giuliani.
 
-Modified and maintained by **Jose Alberonisse Lima Moreira**.
+Modified and maintained by **Alber Multi House**.
 
 This version focuses on standalone operation using a physical button and WS2812 RGB LED, removing controller-based commands and simplifying memory card management.
 
