@@ -1,19 +1,12 @@
 #include "pico/stdio.h"
 #include "pico/stdlib.h"
-/* SD Card */
 #include "sd_config.h"
-/* Time and Timestamps */
 #include "pico/time.h"
-/* TinyUSB */
 #include "bsp/board.h"
 #include "tusb.h"
-/* Memcard Simulation */
 #include "memcard_simulator.h"
-/* LED Control */
 #include "led.h"
-/* Global Configuration */
 #include "config.h"
-
 
 bool tud_mount_status = false;
 
@@ -21,10 +14,9 @@ void cdc_task(void);
 
 /*------------- MAIN -------------*/
 int main(void) {
-	stdio_init_all();
+	//stdio_init_all();
 	led_init();
-	
-	/* Pico connected to PC, initialize USB transfer mode */
+    
 	board_init();
 	tusb_init();
 
@@ -35,10 +27,7 @@ int main(void) {
 		if(to_ms_since_boot(get_absolute_time()) > TUD_MOUNT_TIMEOUT && !tud_mount_status)
 			break;
 	}
-	
-	/* Pico powered by PSX, initialize memory card simulation */
 	simulate_memory_card();	
-
 	return 0;
 }
 

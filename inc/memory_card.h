@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include "config.h"
 
+
 #define MC_SEC_SIZE			128		// size of single sector in bytes
 #define MC_SEC_COUNT		1024	// number of sector in one memory card
 #define MC_SIZE				MC_SEC_SIZE * MC_SEC_COUNT		// size of memory card in bytes
@@ -22,11 +23,12 @@
 
 /* Error codes */
 #define MC_OK				0
-#define MC_FILE_OPEN_ERR	1
-#define MC_FILE_READ_ERR	2
 #define MC_FILE_WRITE_ERR	3
-#define MC_FILE_SIZE_ERR	4
-#define MC_NO_INIT			5
+#define MC_FILE_READ_ERR	4
+#define MC_FILE_OPEN_ERR	5
+#define MC_FILE_SIZE_ERR	7
+#define MC_NO_INIT			8
+
 
 typedef struct {
 	uint8_t flag_byte;
@@ -36,7 +38,7 @@ typedef struct {
 typedef uint16_t sector_t;
 
 uint32_t memory_card_init(memory_card_t* mc);
-uint32_t memory_card_import(memory_card_t* mc, uint8_t* file_name);
+int8_t memory_card_import(memory_card_t* mc, const char* fileName);
 bool memory_card_is_sector_valid(memory_card_t* mc, sector_t sector);
 uint8_t* memory_card_get_sector_ptr(memory_card_t* mc, sector_t sector);
 void memory_card_reset_seen_flag(memory_card_t* mc);

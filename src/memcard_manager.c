@@ -5,77 +5,113 @@
 #include "sd_config.h"
 #include "memory_card.h"
 
-/* extension for memcard files */
-static const char memcard_file_ext[] = ".MCR";
 
-/* filename to store previously loaded memcard index */
-static const char memcard_lastmemcardindex_filename[] = "LastMemcardIndex.dat";
+uint16_t imageCount = 0;
+uint16_t imagePosition = 0;
+uint16_t imageToPosition = 0;
+uint8_t image_names[(MAX_MC_FILENAME_LEN + 1) * MAX_MC_IMAGES];
 
-bool is_name_valid(uint8_t* filename) {
-	if(!filename)
-		return false;
-	filename = strupr(filename);	// convert to upper case
-	/* check .MCR extension */
-	uint8_t* ext = strrchr(filename, '.');
-	if(!ext || strcmp(ext, memcard_file_ext))
-		return false;
-	/* check that filename (excluding extension) is only digits */
-	uint32_t digit_char_count = strspn(filename, "0123456789");
-	if(digit_char_count != strlen(filename) - strlen(memcard_file_ext))
-		return false;
-	return true;
+
+static inline bool equalsIgnoreCase(const char* a, const char* b)
+{
+    if (!a || !b) return false;
+
+    while (*a && *b) {
+        unsigned char ca = (unsigned char)*a++;
+        unsigned char cb = (unsigned char)*b++;
+
+        // tolower ASCII
+        if (ca >= 'A' && ca <= 'Z') ca |= 0x20;
+        if (cb >= 'A' && cb <= 'Z') cb |= 0x20;
+
+        if (ca != cb)
+            return false;
+    }
+
+    // ambos precisam terminar juntos
+    return (*a == '\0' && *b == '\0');
 }
 
-bool is_image_valid(uint8_t* filename) {
-	if(!filename)
-		return false;
-	filename = strupr(filename);	// convert to upper case
-	if(!is_name_valid(filename))
-		return false;
+static inline bool endsWithIgnoreCase(const char* str, const char* suf){
+    if (!str || !suf) return false;
+    size_t lenStr = strlen(str);
+    size_t lenSuf = strlen(suf);
+    // extensão obrigatória
+    if (lenSuf == 0 || lenSuf >= lenStr)
+        return false;
+    const char* p = str + (lenStr - lenSuf);
+    const char* s = suf;
+    while (*s) {
+        unsigned char a = (unsigned char)*p++;
+        unsigned char b = (unsigned char)*s++;
+        // tolower ASCII
+        if (a >= 'A' && a <= 'Z') a |= 0x20;
+        if (b >= 'A' && b <= 'Z') b |= 0x20;
+
+        if (a != b) return false;
+    }
+    return true;
+}
+
+static inline int8_t acceptEntry(const FILINFO* e, char* dstFileName)
+{
+    //0 - Rejeita
+    //1 - OK
+    //2 - Comprimento do nome deve ser no maximo de 60 caracteres + .mcr
+    //3 - Arquivo .mcr danificado
+
+    if (!e || !dstFileName)  return 0;
+    if (e->fattrib & AM_HID) return 0; // Rejeita ocultos    
+    if (e->fattrib & AM_DIR) return 0; // Rejeita diretórios
+
+    // Escolhe nome: LFN se existir, senão 8.3
+    const char* name =  e->fname;
+    if (!name) return 0;
+
+    // Extensao obrigatoria .mcr (case-insensitive)
+    if (!endsWithIgnoreCase(name, ".mcr"))
+        return 0;
+
+    // Comprimento maximo: MAX_MC_FILENAME_LEN - 1
+    size_t nameLen = strlen(name);    
+    if (nameLen == 0 || nameLen >= MAX_MC_FILENAME_LEN)
+        return 2; //Comprimento do nome deve ser no maximo de 60 caracteres + .mcr
+
+    if (e->fsize != MC_SIZE)
+        return 3; //Arquivo .mcr danificado
+        
+    // Cópia segura + terminador garantido
+    memcpy(dstFileName, name, nameLen);
+    dstFileName[nameLen] = '\0';
+
+    return 1;
+}
+
+
+
+
+bool is_image_valid(const char* filename){
+	if(!filename) return false;
 	FILINFO f_info;
 	FRESULT f_res = f_stat(filename, &f_info);
 	if(f_res != FR_OK)
 		return false;
-	if(f_info.fsize != MC_SIZE)	// check that memory card image has correct size
+	if(f_info.fsize != MC_SIZE)
 		return false;
 	return true;
 }
 
-uint32_t update_prev_loaded_memcard_index(uint32_t index) {
-	/* update the previously loaded memcard index stored on the SD card */
-	uint32_t retVal = MM_OK;
-	FIL data_file;
-	uint32_t buff_size = 100;
-	FRESULT res = f_open(&data_file, memcard_lastmemcardindex_filename, FA_CREATE_ALWAYS | FA_WRITE);
-	if (res == FR_OK) {
-		/* int to string */
-		char str_index[buff_size];
-		int index_len = sprintf(str_index, "%d", index);
 
-		/* overwrite the contents with new index */
-		UINT bytes_written;
-		f_write(&data_file, str_index, index_len, &bytes_written);
-		if (bytes_written < index_len) {
-			/* error writing to file. disk full? */
-			retVal = MM_FILE_WRITE_ERR;
-		}
-		f_close(&data_file);
-	}
-
-	return retVal;
-}
-
-bool memcard_manager_exist(uint8_t* filename) {
-	if(!filename)
-		return false;
-	return is_image_valid(filename);
+bool memcard_manager_exist(const char* filename) {
+    if (!filename) return false;
+    FILINFO f_info;
+    return (f_stat(filename, &f_info) == FR_OK);
 }
 
 uint32_t memcard_manager_count() {
-	FRESULT res;
-	DIR root;
 	FILINFO f_info;
-	res = f_opendir(&root, "");	// open root directory
+    DIR root;
+	FRESULT res = f_opendir(&root, "");	// open root directory
 	uint32_t count = 0;
 	if(res == FR_OK) {
 		while(true) {
@@ -90,180 +126,156 @@ uint32_t memcard_manager_count() {
 	return count;
 }
 
-uint32_t memcard_manager_get(uint32_t index, uint8_t* out_filename) {
-	if(!out_filename)
-		return MM_BAD_PARAM;
-	if(index < 0 || index > MAX_MC_IMAGES)
-		return MM_INDEX_OUT_OF_BOUNDS;
-	uint32_t count = memcard_manager_count();
-	if(index >= count)
-		return MM_INDEX_OUT_OF_BOUNDS;
-	uint8_t* image_names = malloc(((MAX_MC_FILENAME_LEN + 1) * count));	// allocate space for image names
-	if(!image_names)
-		return MM_ALLOC_FAIL; // malloc failed
-	/* retrive images names */
-	FRESULT res;
-	DIR root;
-	FILINFO f_info;
-	res = f_opendir(&root, "");	// open root directory
-	uint32_t i = 0;
-	if(res == FR_OK) {
-		while(true) {
-			res = f_readdir(&root, &f_info);
-			if(res != FR_OK || f_info.fname[0] == 0) break;
-			if(!(f_info.fattrib & AM_DIR)) {	// not a directory
-				if(is_image_valid(f_info.fname)) {
-					strcpy(&image_names[(MAX_MC_FILENAME_LEN + 1) * i], f_info.fname);
-					++i;
-				}
-			}
-		}
-	}
-	/* sort names alphabetically */
-	qsort(image_names, count, (MAX_MC_FILENAME_LEN + 1), (__compar_fn_t) strcmp);
-	strcpy(out_filename, &image_names[(MAX_MC_FILENAME_LEN + 1) * index]);
-	free(image_names);	// free allocated memory
-	return MM_OK;
+
+/*void saveSelectMC(const char* selectMC) {
+    if (!selectMC) return;
+    FIL f;
+    FRESULT fr = f_open(&f, "selectMC.bin", FA_CREATE_ALWAYS | FA_WRITE);
+    if (fr != FR_OK)
+        return;
+
+    UINT bw = 0;
+    fr = f_write(&f, selectMC, MAX_MC_FILENAME_LEN, &bw);
+    if (fr == FR_OK && bw == MAX_MC_FILENAME_LEN) {
+        f_sync(&f);
+    }
+
+    f_close(&f);
+}*/
+
+void saveSelectMC(const char* selectMC) {
+    if (!selectMC) return;
+
+    size_t len = strlen(selectMC);
+    if (len == 0 || len >= MAX_MC_FILENAME_LEN)
+        return;
+
+    FIL f;
+    if (f_open(&f, "selectMC.txt", FA_CREATE_ALWAYS | FA_WRITE) != FR_OK)
+        return;
+
+    UINT bw;
+    f_write(&f, selectMC, len, &bw);
+    f_close(&f);
 }
 
-uint32_t memcard_manager_get_prev_loaded_memcard_index() {
-	/* read which memcard to load from last session from SD card */
-	uint32_t index = 0;
-	FIL data_file;
-	uint32_t buff_size = 100;
-	FRESULT res = f_open(&data_file, memcard_lastmemcardindex_filename, FA_OPEN_EXISTING | FA_READ);
-	if (res == FR_OK) {
-		char line[buff_size];
-		if (f_gets(line, sizeof(line), &data_file)) {
-			/* string to int (base 10) */
-			index = (uint32_t)strtol(line, (char**)NULL, 10);
-		}
-		f_close(&data_file);
-	}
-	return index;
+bool loadSelectMC(char* out) {
+    if (!out) return false;
+
+    FIL f;
+    if (f_open(&f, "selectMC.txt", FA_READ) != FR_OK)
+        return false;
+
+    UINT br;
+    f_read(&f, out, MAX_MC_FILENAME_LEN - 1, &br);
+    f_close(&f);
+
+    out[br] = '\0';   // termina string
+    return br > 0;
 }
 
-uint32_t memcard_manager_get_next(uint8_t* filename, uint8_t* out_nextfile) {
-	if(!filename || !out_nextfile)
-		return MM_BAD_PARAM;
-	uint32_t count = memcard_manager_count();
-	uint32_t buff_size = (MAX_MC_FILENAME_LEN + 1) * count;
-	uint8_t* image_names = malloc(buff_size);	// allocate space for image names
-	if(!image_names)
-		return MM_ALLOC_FAIL; // malloc failed
-	/* retrive images names */
-	FRESULT res;
-	DIR root;
-	FILINFO f_info;
-	res = f_opendir(&root, "");	// open root directory
-	uint32_t i = 0;
-	if(res == FR_OK) {
-		while(true) {
-			res = f_readdir(&root, &f_info);
-			if(res != FR_OK || f_info.fname[0] == 0) break;
-			if(!(f_info.fattrib & AM_DIR)) {	// not a directory
-				if(is_image_valid(f_info.fname)) {
-					strcpy(&image_names[(MAX_MC_FILENAME_LEN + 1) * i], f_info.fname);
-					++i;
-				}
-			}
+
+
+
+int8_t memcard_manager_restart(char*outFileName) {
+    FILINFO currentEntry, nextEntry;
+    DIR dir; // open root directory
+	FRESULT res = f_opendir(&dir, "");	
+    if(res != FR_OK) {
+        //No SD Card
+        return MM_NO_SD_CARD;
+    }
+    imageCount = 0;
+    bool hasNext = false;
+	currentEntry.fname[0] = '\0';
+    res = f_readdir(&dir, &currentEntry);
+    if (res == FR_OK && currentEntry.fname[0] != '\0'){
+        res = f_readdir(&dir, &nextEntry);
+        hasNext = (res == FR_OK && nextEntry.fname[0] != '\0');
+        while (true){
+            if(acceptEntry(&currentEntry, &image_names[MAX_MC_FILENAME_LEN * imageCount])==1){
+                if (++imageCount >= MAX_MC_IMAGES){
+                    hasNext = 0;
+                }
+            }
+            if (hasNext == 0)
+            {
+                break;
+            }
+            currentEntry = nextEntry;
+            res = f_readdir(&dir, &nextEntry);
+            hasNext = (res == FR_OK && nextEntry.fname[0] != '\0');
+        }
+    }
+    
+    imagePosition = 0;
+    if(imageCount<=0){
+        //NOVO MEMORY CARD
+		int8_t status = memcard_manager_create(outFileName);
+		if(status != MM_OK) {
+            return status;
 		}
-	}
-	/* sort names alphabetically */
-	qsort(image_names, count, (MAX_MC_FILENAME_LEN + 1), (__compar_fn_t) strcmp);
-	/* find current and return following one */
-	bool found = false;
-	for(uint32_t i = 0; i < buff_size; i = i + (MAX_MC_FILENAME_LEN + 1)) {
-		if(!strcmp(filename, &image_names[i])) {
-			int32_t next_i = i + (MAX_MC_FILENAME_LEN + 1);
-			if(next_i < buff_size) {
-				int32_t new_index = next_i / ((MAX_MC_FILENAME_LEN + 1));
-				update_prev_loaded_memcard_index(new_index);
-				strcpy(out_nextfile, &image_names[next_i]);
-				found = true;
-				break;
-			}
-		}
-	}
-	free(image_names);	// free allocated memory
-	/* return */
-	if(found)
-		return MM_OK;
-	else
-		return MM_NO_ENTRY;
+        
+    }else if(imageCount>1){        
+        // Ordem Alfabética
+    	qsort(image_names, imageCount, MAX_MC_FILENAME_LEN, (__compar_fn_t) strcmp);
+
+        //Seleciona o ultimo mc usado
+        char selectMCTmp[MAX_MC_FILENAME_LEN];
+        if(loadSelectMC(selectMCTmp)){
+            for(int i=0;i<imageCount;i++){
+                const char* name = (char*)&image_names[MAX_MC_FILENAME_LEN * i];
+                if (equalsIgnoreCase(name, selectMCTmp)) {
+                    imagePosition = i;
+                    break;
+                }
+            }
+        }
+    }
+
+    memset(outFileName, 0, MAX_MC_FILENAME_LEN);
+    memcpy(outFileName, &image_names[MAX_MC_FILENAME_LEN * imagePosition], MAX_MC_FILENAME_LEN-1);
+    outFileName[MAX_MC_FILENAME_LEN - 1] = '\0';
+
+    return MM_OK;
 }
 
-uint32_t memcard_manager_get_prev(uint8_t* filename, uint8_t* out_prevfile) {
-	if(!filename || !out_prevfile)
+
+int8_t memcard_manager_get_position(uint16_t position, char* outFileName) {
+	if(position>=imageCount || !outFileName)
 		return MM_BAD_PARAM;
-	uint32_t count = memcard_manager_count();
-	uint32_t buff_size = (MAX_MC_FILENAME_LEN + 1) * count;
-	uint8_t* image_names = malloc(buff_size);	// allocate space for image names
-	if(!image_names)
-		return MM_ALLOC_FAIL; // malloc failed
-	/* retrive images names */
-	FRESULT res;
-	DIR root;
-	FILINFO f_info;
-	res = f_opendir(&root, "");	// open root directory
-	uint32_t i = 0;
-	if(res == FR_OK) {
-		while(true) {
-			res = f_readdir(&root, &f_info);
-			if(res != FR_OK || f_info.fname[0] == 0) break;
-			if(!(f_info.fattrib & AM_DIR)) {	// not a directory
-				if(is_image_valid(f_info.fname)) {
-					strcpy(&image_names[(MAX_MC_FILENAME_LEN + 1) * i], f_info.fname);
-					++i;
-				}
-			}
-		}
-	}
-	/* sort names alphabetically */
-	qsort(image_names, count, (MAX_MC_FILENAME_LEN + 1), (__compar_fn_t) strcmp);
-	/* find current and return prior one */
-	bool found = false;
-	for(uint32_t i = 0; i < buff_size; i = i + (MAX_MC_FILENAME_LEN + 1)) {
-		if(!strcmp(filename, &image_names[i])) {
-			int32_t prev_i = i - (MAX_MC_FILENAME_LEN + 1);
-			if(prev_i >= 0) {
-				int32_t new_index = prev_i / (MAX_MC_FILENAME_LEN + 1);
-				update_prev_loaded_memcard_index(new_index);
-				strcpy(out_prevfile, &image_names[prev_i]);
-				found = true;
-				break;
-			}
-		}
-	}
-	free(image_names);	// free allocated memory
-	/* return */
-	if(found)
-		return MM_OK;
-	else
-		return MM_NO_ENTRY;
+
+    imagePosition = position;
+    
+    memset(outFileName, 0, MAX_MC_FILENAME_LEN);
+    memcpy(outFileName, &image_names[MAX_MC_FILENAME_LEN * imagePosition], MAX_MC_FILENAME_LEN-1);
+    outFileName[MAX_MC_FILENAME_LEN - 1] = '\0';
+    return MM_OK;
 }
 
-uint32_t memcard_manager_create(uint8_t* out_filename) {
-	if(!out_filename)
+uint8_t memcard_manager_create(char*outFileName) {
+	if(!outFileName)
 		return MM_BAD_PARAM;
 
-  uint8_t name[MAX_MC_FILENAME_LEN + 1];
-  FIL memcard_image;
+    if (imageCount >= MAX_MC_IMAGES)
+        return MM_LIMITE_MC;
 
-  uint8_t memcard_n = 0;
-  FRESULT f_res;
-  do {
-    snprintf(name, MAX_MC_FILENAME_LEN + 1, "%d.MCR", memcard_n++); // Set name to %d.MCR
-    f_res = f_open(&memcard_image, name, FA_CREATE_NEW | FA_WRITE); // Open new file for writing
-  } while (f_res == FR_EXIST); // Repeat if file exists.
+	uint32_t memcard_n = 1;
+    do {
+        if (memcard_n+1>= MAX_MC_IMAGES) return MM_LIMITE_MC;
+        memset(outFileName, 0, MAX_MC_FILENAME_LEN);
+        snprintf(outFileName, MAX_MC_FILENAME_LEN-1, "memorycard%03d.mcr", memcard_n++);
+    } while(memcard_manager_exist(outFileName));
 
-  strcpy(out_filename, name); // We have a valid name, copy it to out_filename
 
+	// Generate image file
+	FIL memcard_image;
+	FRESULT f_res = f_open(&memcard_image, outFileName, FA_CREATE_NEW | FA_WRITE);
 	if(f_res == FR_OK) {
 		UINT bytes_written = 0;
 		uint8_t buffer[MC_SEC_SIZE];
 		uint8_t xor;
-		/* header frame (block 0, sec 0) */
+		// header frame (block 0, sec 0)
 		buffer[0] = 'M';
 		buffer[1] = 'C';
 		xor = buffer[0] ^ buffer[1];
@@ -275,9 +287,9 @@ uint32_t memcard_manager_create(uint8_t* out_filename) {
 		f_res = f_write(&memcard_image, buffer, MC_SEC_SIZE, &bytes_written);
 		if(f_res != FR_OK || bytes_written != MC_SEC_SIZE) {
 			f_close(&memcard_image);
-			return MM_FILE_WRITE_ERR;
+			return MM_NEW_MC_ERR;//MM_FILE_WRITE_ERR;
 		}
-		/* directory frames (block 0, sec 1..15) */
+		// directory frames (block 0, sec 1..15)
 		buffer[0] = 0xa0;	// free block
 		xor = buffer[0];
 		for(int i = 1; i < 8; i++) {
@@ -295,7 +307,7 @@ uint32_t memcard_manager_create(uint8_t* out_filename) {
 			f_res = f_write(&memcard_image, buffer, MC_SEC_SIZE, &bytes_written);
 			if(f_res != FR_OK || bytes_written != MC_SEC_SIZE) {
 				f_close(&memcard_image);
-				return MM_FILE_WRITE_ERR;
+				return MM_NEW_MC_ERR;//MM_FILE_WRITE_ERR;
 			}
 		}
 		/* broken sector list (block 0, sec 16..35) */
@@ -314,7 +326,7 @@ uint32_t memcard_manager_create(uint8_t* out_filename) {
 			f_res = f_write(&memcard_image, buffer, MC_SEC_SIZE, &bytes_written);
 			if(f_res != FR_OK || bytes_written != MC_SEC_SIZE) {
 				f_close(&memcard_image);
-				return MM_FILE_WRITE_ERR;
+				return MM_NEW_MC_ERR;//MM_FILE_WRITE_ERR;
 			}
 		}
 		/* broken sector replacement data (block 0, sec 36..55) and unused frames (block 0, sec 56..62) */
@@ -325,7 +337,7 @@ uint32_t memcard_manager_create(uint8_t* out_filename) {
 			f_res = f_write(&memcard_image, buffer, MC_SEC_SIZE, &bytes_written);
 			if(f_res != FR_OK || bytes_written != MC_SEC_SIZE) {
 				f_close(&memcard_image);
-				return MM_FILE_WRITE_ERR;
+				return MM_NEW_MC_ERR;//MM_FILE_WRITE_ERR;
 			}
 		}
 		/* test write sector (block 0, sec 63) */
@@ -340,7 +352,7 @@ uint32_t memcard_manager_create(uint8_t* out_filename) {
 		f_res = f_write(&memcard_image, buffer, MC_SEC_SIZE, &bytes_written);
 		if(f_res != FR_OK || bytes_written != MC_SEC_SIZE) {
 			f_close(&memcard_image);
-			return MM_FILE_WRITE_ERR;
+			return MM_NEW_MC_ERR;//MM_FILE_WRITE_ERR;
 		}
 		/* fill remaining 15 blocks with zeros */
 		for(int i = 0; i < MC_SEC_SIZE; i++) {
@@ -350,13 +362,19 @@ uint32_t memcard_manager_create(uint8_t* out_filename) {
 			f_res = f_write(&memcard_image, buffer, MC_SEC_SIZE, &bytes_written);
 			if(f_res != FR_OK || bytes_written != MC_SEC_SIZE) {
 				f_close(&memcard_image);
-				return MM_FILE_WRITE_ERR;
+				return MM_NEW_MC_ERR;//MM_FILE_WRITE_ERR;
 			}
 		}
+        f_sync(&memcard_image);
 		f_close(&memcard_image);
+
+        // Cópia segura + terminador garantido
+        memcpy(&image_names[MAX_MC_FILENAME_LEN * imageCount], outFileName, MAX_MC_FILENAME_LEN-1);
+        image_names[MAX_MC_FILENAME_LEN-1] = '\0';        
+        imageCount++;
+
+        return MM_OK;
 	} else {
-		return MM_FILE_OPEN_ERR;
+		return MM_NEW_MC_ERR;//MM_FILE_OPEN_ERR;
 	}
-	update_prev_loaded_memcard_index(memcard_n - 1);
-	return MM_OK;
 }

@@ -1,44 +1,43 @@
 #include "memory_card.h"
+#include "pico/stdlib.h"
 #include <stdlib.h>
 #include "config.h"
 #include "ff.h"
-#include "pico/stdlib.h"
+#include <string.h>
 
-uint32_t memory_card_init(memory_card_t* mc) {
-	if(!mc)
-		return MC_NO_INIT;
-	mc->flag_byte = MC_FLAG_BYTE_DEF;
-	mc->data = (uint8_t*) malloc(sizeof(uint8_t) * MC_SIZE);
-	if(!mc->data)
-		return MC_NO_INIT;	// malloc failed
-	return MC_OK;
+int8_t memory_card_import(memory_card_t* mc, const char* fileName)
+{
+    if (!mc || !mc->data)
+        return MC_NO_INIT;
+
+    if (!fileName)
+        return MC_FILE_OPEN_ERR;
+
+    FIL memcard;
+    FRESULT fr = f_open(&memcard, fileName, FA_READ);
+    if (fr != FR_OK)
+        return MC_FILE_OPEN_ERR;
+
+    // valida tamanho do arquivo
+    if (f_size(&memcard) != MC_SIZE) {
+        f_close(&memcard);
+        return MC_FILE_SIZE_ERR;
+    }
+
+    mc->flag_byte = MC_FLAG_BYTE_DEF;
+
+    UINT bytes_read = 0;
+    fr = f_read(&memcard, mc->data, MC_SIZE, &bytes_read);
+    f_close(&memcard);
+
+    if (fr != FR_OK || bytes_read != MC_SIZE) {
+        memset(mc->data, 0, MC_SIZE);
+        return MC_FILE_READ_ERR;
+    }
+
+    return MC_OK;
 }
 
-uint32_t memory_card_import(memory_card_t* mc, uint8_t* file_name) {
-	uint32_t status = MC_OK;
-	FIL memcard;
-
-	if(mc) {
-		mc->flag_byte = MC_FLAG_BYTE_DEF;
-		if(FR_OK == f_open(&memcard, file_name, FA_READ)) {
-			UINT bytes_read;
-			if(FR_OK == f_read(&memcard, mc->data, MC_SIZE, &bytes_read)) {
-				if(MC_SIZE != bytes_read) {
-					status = MC_FILE_READ_ERR;
-				}
-			} else {
-				status = MC_FILE_SIZE_ERR;
-			}
-			f_close(&memcard);
-		} else {
-			status = MC_FILE_OPEN_ERR;
-		}
-	} else {
-		status = MC_NO_INIT;
-	}
-
-	return status;
-}
 
 bool memory_card_is_sector_valid(memory_card_t* mc, sector_t sector) {
 	(void) mc;
@@ -77,6 +76,7 @@ uint32_t memory_card_sync_sector(memory_card_t* mc, sector_t sector, uint8_t* fi
 			if(MC_SEC_SIZE != bytes_written) {
 				status = MC_FILE_SIZE_ERR;
 			}
+            f_sync(&memcard);   // < ISSO FAZ GRAVAR DE VERDADE
 		} else {
 			status = MC_FILE_WRITE_ERR;
 		}
@@ -88,3 +88,4 @@ uint32_t memory_card_sync_sector(memory_card_t* mc, sector_t sector, uint8_t* fi
 
 	return status;
 }
+

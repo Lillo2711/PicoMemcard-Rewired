@@ -6,21 +6,27 @@
 
 /* Error codes */
 #define MM_OK					0
-#define MM_ALLOC_FAIL			1
-#define MM_INDEX_OUT_OF_BOUNDS	2
-#define MM_NO_ENTRY				3
-#define MM_BAD_PARAM			4
-#define MM_NAME_CONFLICT		5
-#define MM_FILE_OPEN_ERR		6
-#define MM_FILE_WRITE_ERR		7
+#define MM_NO_SD_CARD			1
+#define MM_LIMITE_MC	        2
+#define MM_FILE_WRITE_ERR		3
+#define MM_FILE_READ_ERR		4
+#define MM_FILE_OPEN_ERR		5
+#define MM_NEW_MC_ERR		    6
 
-bool memcard_manager_exist(uint8_t* filename);
+#define MM_BAD_PARAM		    9
+
+extern uint16_t imageCount;
+extern uint16_t imagePosition;
+extern uint16_t imageToPosition;
+
+bool memcard_manager_exist(const char* filename);
 uint32_t memcard_manager_count();
 uint32_t memcard_manager_get(uint32_t index, uint8_t* out_filename);
-#define memcard_manager_get_initial(out_filename) memcard_manager_get(memcard_manager_get_prev_loaded_memcard_index(), (out_filename))
-uint32_t memcard_manager_get_prev_loaded_memcard_index();
-uint32_t memcard_manager_get_next(uint8_t* filename, uint8_t* out_nextfile);
-uint32_t memcard_manager_get_prev(uint8_t* filename, uint8_t* out_prevfile);
-uint32_t memcard_manager_create(uint8_t* out_filename);
+//#define memcard_manager_get_first(out_filename) memcard_manager_get(0, (out_filename))
+int8_t memcard_manager_restart();
+int8_t memcard_manager_get_position(uint16_t position, char* out_nextfile);
+uint8_t memcard_manager_create(char*outFileName);
+void saveSelectMC(const char* selectMC);
 
-#endif
+
+#endif /* __MEMCARD_MANAGER_H__ */
