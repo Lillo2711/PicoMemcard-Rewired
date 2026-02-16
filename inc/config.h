@@ -9,15 +9,31 @@
 #define MAX_MC_IMAGES	255					// maximum number of different mc images
 #define MC_RECONNECT_TIME	1000			// time (in ms) the memory card stays disconnected when simulating reconnection
 
+#ifdef PICO_1
+    //PICO
+    #define PIN_MISO	    16
+    #define PIN_SS	        17
+    #define PIN_MOSI	    19
+    #define PIN_SCK	        18
+    #define PIN_BTN         3
 
+    #ifdef SET_GP_LED
+        #define PICO_LED_PIN SET_GP_LED
+    #else
+        #define PICO_LED_PIN 25
+    #endif
+#else
+    //PICO_ZERO
+    #define PIN_MISO	    0
+    #define PIN_SS		    1
+    #define PIN_SCK		    2
+    #define PIN_MOSI	    3
+    #define PIN_BTN         4
 
-//PLACA PICO_ZERO
-#define PIN_MISO	0
-#define PIN_SS		1
-#define PIN_SCK		2
-#define PIN_MOSI	3
-#define PIN_BTN     4
-
+    #ifdef SET_GP_LED
+        #define PICO_LED_PIN SET_GP_LED
+    #endif
+#endif
 
 #define PIN_DAT 5
 #define PIN_CMD PIN_DAT + 1		// must be immediately after PIN_DAT

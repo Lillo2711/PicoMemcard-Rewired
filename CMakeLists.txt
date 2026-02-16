@@ -11,23 +11,32 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 pico_sdk_init()
 
-add_executable(PicoMemcard)
+# ===========================
+# Seleção da placa
+# ===========================
 
-pico_set_linker_script(PicoMemcard ${CMAKE_SOURCE_DIR}/memmap.ld)
-pico_generate_pio_header(PicoMemcard ${CMAKE_CURRENT_LIST_DIR}/psxSPI.pio)
-pico_generate_pio_header(PicoMemcard ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
-
-# Escolhe driver de LED conforme a placa
-if(DEFINED PICO_ZERO)
+if(DEFINED PICO_1)
+    set(FW_NAME PicoMemCard-MH_PICO_1)
     set(LED_SRC ${CMAKE_SOURCE_DIR}/src/led.c)
-    target_compile_definitions(PicoMemcard PUBLIC PICO=1)
+    set(BOARD_DEF PICO_1=1)
 else()
-    set(LED_SRC ${CMAKE_SOURCE_DIR}/src/led_ws2812.c)
-    target_compile_definitions(PicoMemcard PUBLIC PICO_ZERO=1)
-endif()
-message(STATUS "LED driver: ${LED_SRC}")
+    set(FW_NAME PicoMemCard-MH_PICO_0)
+    set(BOARD_DEF PICO_0=1)
 
-target_sources(PicoMemcard PUBLIC
+    if(DEFINED SET_GP_LED)
+        set(LED_SRC ${CMAKE_SOURCE_DIR}/src/led.c)
+    else()
+        set(LED_SRC ${CMAKE_SOURCE_DIR}/src/led_ws2812.c)
+    endif()
+endif()
+
+# ===========================
+# Target
+# ===========================
+
+add_executable(${FW_NAME})
+
+target_sources(${FW_NAME} PUBLIC
     ${LED_SRC}
     ${CMAKE_SOURCE_DIR}/src/main.c
     ${CMAKE_SOURCE_DIR}/src/memcard_manager.c
@@ -38,15 +47,34 @@ target_sources(PicoMemcard PUBLIC
     ${CMAKE_SOURCE_DIR}/src/usb_descriptors.c
 )
 
-# Example include
-target_include_directories(PicoMemcard PUBLIC
+# ===========================
+# Defines comuns
+# ===========================
+
+target_compile_definitions(${FW_NAME} PUBLIC ${BOARD_DEF})
+
+if(DEFINED SET_GP_LED)
+    target_compile_definitions(${FW_NAME} PUBLIC SET_GP_LED=${SET_GP_LED})
+    message(STATUS "LED GPIO: ${SET_GP_LED}")
+endif()
+
+message(STATUS "LED driver: ${LED_SRC}")
+message(STATUS "Firmware: ${FW_NAME}")
+
+
+pico_set_linker_script(${FW_NAME} ${CMAKE_SOURCE_DIR}/memmap.ld)
+pico_generate_pio_header(${FW_NAME} ${CMAKE_CURRENT_LIST_DIR}/psxSPI.pio)
+pico_generate_pio_header(${FW_NAME} ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
+
+target_include_directories(${FW_NAME} PUBLIC
     ${CMAKE_SOURCE_DIR}/inc
 )
 
-pico_enable_stdio_uart(PicoMemcard 1)	# enable only UART stdio
+pico_enable_stdio_uart(${FW_NAME} 1)	# enable only UART stdio
 
-add_subdirectory(no-OS-FatFS-SD-SPI-RPi-Pico/FatFs_SPI build)
-target_link_libraries(PicoMemcard pico_stdlib pico_multicore pico_time hardware_pio tinyusb_device tinyusb_board FatFs_SPI)
+#add_subdirectory(no-OS-FatFS-SD-SPI-RPi-Pico/FatFs_SPI build)
+add_subdirectory(no-OS-FatFS-SD-SPI-RPi-Pico/FatFs_SPI FatFs_SPI_build)
 
+target_link_libraries(${FW_NAME} pico_stdlib pico_multicore pico_time hardware_pio tinyusb_device tinyusb_board FatFs_SPI)
 
-pico_add_extra_outputs(PicoMemcard)
+pico_add_extra_outputs(${FW_NAME})
