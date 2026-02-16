@@ -74,21 +74,148 @@ Behavior:
 
 ---
 
-## LED Status (WS2812 RGB)
+## LED Status and Error Codes
+
+The firmware provides visual feedback using:
+
+- **RP2040-Zero:** WS2812 RGB LED  
+- **Raspberry Pi Pico:** onboard single-color LED (green)
+
+Because Raspberry Pi Pico has no RGB LED, colors below apply only to RP2040-Zero.  
+On Pico, all states are represented by LED ON/OFF or blinking.
+
+---
+
+### Normal Operation
+
+### RP2040-Zero (WS2812 RGB)
 
 | Color | Meaning |
 |------|---------|
 | Off | Idle |
-| Orange | Writing / syncing |
-| Red blinking | Error |
-| Blue blinking | Memory card switching |
-| Green blinking | New memory card created |
+| Orange solid | Writing / syncing memory card |
+| Blue blinking | Switching memory card |
+| Green triple blink | New memory card created |
+
+### Raspberry Pi Pico (single LED)
+
+| LED | Meaning |
+|-----|---------|
+| Off | Idle |
+| Solid ON | Writing / syncing |
+| Fast blinking | Switching memory card |
+| Triple blink | New memory card created |
+
+---
+
+### Error Codes (Red Blinking / Pico blinking)
+
+When a critical error happens:
+
+- RP2040-Zero blinks **RED**
+- Raspberry Pi Pico blinks its onboard LED
+
+The number of blinks represents the error code.
+
+| Blinks | Error |
+|--------|------|
+| 1 | SD card not detected / mount failed |
+| 2 | Maximum number of memory cards reached |
+| 3 | File write error |
+| 4 | File read error |
+| 5 | File open error |
+| 6 | Failed creating new memory card |
+| 7 | Invalid memory card size |
+| 8 | Memory card not initialized |
+| 9 | Bad parameter |
+
+Behavior:
+
+- LED turns on
+- Waits ~2 seconds
+- Blinks N times
+- Repeats forever
+
+This allows diagnosing problems without USB or serial output.
+
+---
+
+### Important
+
+If LED stays ON (or orange on RP2040-Zero) for too long, do NOT power off the console.
+
+Wait until LED turns off before shutting down to avoid save corruption.
+
+
+## LED Status and Error Codes
+
+The firmware uses LED feedback (WS2812 on RP2040-Zero, onboard LED on Raspberry Pi Pico) to indicate all runtime states.
+
+### Normal Operation
+
+| LED | Meaning |
+|-----|---------|
+| Off | Idle |
+| Orange solid | Writing / syncing memory card data |
+| Blue blinking | Switching memory card |
+| Green triple blink | New memory card created |
+
+---
+
+### Error Codes (Red Blinking)
+
+When a critical error happens, the LED will blink RED.
+
+The number of blinks represents the error code.
+
+| Blinks | Error |
+|--------|------|
+| 1 | SD card not detected / mount failed |
+| 2 | Maximum number of memory cards reached |
+| 3 | File write error |
+| 4 | File read error |
+| 5 | File open error |
+| 6 | Failed creating new memory card |
+| 7 | Invalid memory card size |
+| 8 | Memory card not initialized |
+| 9 | Bad parameter |
+
+Behavior:
+
+- Red LED turns on
+- Pauses ~2 seconds
+- Blinks N times
+- Repeats forever
+
+This allows diagnosing problems without USB or serial output.
+
+---
+
+### Important
+
+If LED stays orange for too long, do NOT power off the console.
+
+Wait until LED turns off (or green on Pico) to avoid save corruption.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ---
 
 ## SD Card
 
-- FAT formatted
+- exFAT formatted
 - Uses SPI interface
 - All `.MCR` files must be in root directory
 
@@ -103,6 +230,33 @@ Behavior:
 5. Copy `.MCR` files to SD card
 
 ---
+
+## Wiring Diagrams
+
+These diagrams show the physical wiring for both supported boards.
+
+### Raspberry Pi Pico
+
+![Raspberry Pi Pico Wiring](./diagrams/picomemcard_RP2040.png)
+
+---
+
+### RP2040-Zero
+
+![RP2040-Zero Wiring](./diagrams/picomemcard_RP2040-Zero.png)
+
+---
+
+Both boards use the same PSX bus signals, only LED implementation differs:
+
+- RP2040-Zero uses WS2812 RGB
+- Raspberry Pi Pico uses onboard LED
+
+Button is shared on both boards and provides:
+
+- Short press → switch memory card
+- Long press (5 seconds) → create new memory card
+
 
 ## Important Warning
 
