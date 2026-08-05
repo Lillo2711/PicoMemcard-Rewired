@@ -1,4 +1,7 @@
-# PicoMemcard – Simplified Fork (Button + WS2812 Edition)
+# PicoMemcard-Rewired 
+ Forked project from 
+
+#PicoMemcard – Simplified Fork (Button + WS2812 Edition)
 
 This project is a simplified and hardware-oriented fork of the original PicoMemcard by Daniele Giuliani.
 
