@@ -1,15 +1,21 @@
-# PicoMemcard-Rewired 
+#Read Here First
+                                                          
+                                                          # PicoMemcard-Rewired 
  This project is a simple rewire , or maybe a Re-pinned version , of the project #PicoMemcard – Simplified Fork (Button + WS2812 Edition) ,
  it simply aim to take alberonisse project (Button + WS2812 Edition) and repinned it to comply with the original pin set from 
  https://github.com/dangiu/PicoMemcard or simply dangiu's original project cause i have already my Pico mmc Board and i don't want to trash
  my old PCB cause alberonisse like other pin instead the original.
- 
+ Before doing anything stupid check the wiring of your project if it comply with Dangiu's original schematic ,
+ then remember it remove the controller combination and add a phisical button on pin
+
+                               Below is the original document , i have to change the schematic a soon as possible
+
+
+This project depends directly from the fork Modified and maintained by **Alber Multi House**.
 
 #PicoMemcard – Simplified Fork (Button + WS2812 Edition)
 
 This project is a simplified and hardware-oriented fork of the original PicoMemcard by Daniele Giuliani.
-
-Modified and maintained by **Alber Multi House**.
 
 This version focuses on standalone operation using a physical button and WS2812 RGB LED, removing controller-based commands and simplifying memory card management.
 
