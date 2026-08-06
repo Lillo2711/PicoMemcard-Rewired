@@ -1,6 +1,6 @@
 Read Here First
                                                           
-                                                         **testo in grassetto**
+                            **testo in grassetto**
                                                                                                              
  This project is a simple rewire , or maybe a Re-pinned version , of the project #PicoMemcard – Simplified Fork (Button + WS2812 Edition) ,
  it simply aim to take alberonisse project (Button + WS2812 Edition) and repinned it to comply with the original pin set from 
@@ -12,12 +12,12 @@ Read Here First
  and 
  pin 4 and pin Gnd for Rp2040.
 
-                               Below is the original document , i have to change the schematic a soon as possible
+           Below is the original document , i have to change the schematic a soon as possible
 
 
 This project depends directly from the fork Modified and maintained by **Alber Multi House**.
 
-PicoMemcard – Simplified Fork (Button + WS2812 Edition)
+# PicoMemcard – Simplified Fork (Button + WS2812 Edition)
 
 This project is a simplified and hardware-oriented fork of the original PicoMemcard by Daniele Giuliani.
 
