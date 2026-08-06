@@ -15,7 +15,7 @@
     #define PIN_SS	        17
     #define PIN_MOSI	    19
     #define PIN_SCK	        18
-    #define PIN_BTN         3
+    #define PIN_BTN         5
 
     #ifdef SET_GP_LED
         #define PICO_LED_PIN SET_GP_LED
