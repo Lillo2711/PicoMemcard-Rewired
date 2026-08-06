@@ -6,7 +6,8 @@
  https://github.com/dangiu/PicoMemcard or simply dangiu's original project cause i have already my Pico mmc Board and i don't want to trash
  my old PCB cause alberonisse like other pin instead the original.
  Before doing anything stupid check the wiring of your project if it comply with Dangiu's original schematic ,
- then remember it remove the controller combination and add a phisical button on pin
+ then remember it remove the controller combination and add a phisical button on pin 3 and pin Gnd for Raspberry pi pico , 
+ and pin 3 and pin Gnd for Rp2040
 
                                Below is the original document , i have to change the schematic a soon as possible
 
