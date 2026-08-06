@@ -1,6 +1,6 @@
 Read Here First
                                                           
-                            **testo in grassetto**
+#**Pico mmc+ Rewired**
                                                                                                              
 This project is a simple rewire , or maybe a Re-pinned version , of the project #PicoMemcard – Simplified Fork (Button + WS2812 Edition) ,
 it simply aim to take alberonisse project (Button + WS2812 Edition) and repinned it to comply with the original pin set from 
