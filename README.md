@@ -1,6 +1,7 @@
-#Read Here First
+Read Here First
                                                           
                                                          PicoMemcard-Rewired
+                                                                                                              **testo in grassetto**
  This project is a simple rewire , or maybe a Re-pinned version , of the project #PicoMemcard – Simplified Fork (Button + WS2812 Edition) ,
  it simply aim to take alberonisse project (Button + WS2812 Edition) and repinned it to comply with the original pin set from 
  https://github.com/dangiu/PicoMemcard or simply dangiu's original project cause i have already my Pico mmc Board and i don't want to trash
