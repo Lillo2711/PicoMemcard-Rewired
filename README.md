@@ -17,7 +17,7 @@ Read Here First
 
 This project depends directly from the fork Modified and maintained by **Alber Multi House**.
 
-#PicoMemcard – Simplified Fork (Button + WS2812 Edition)
+PicoMemcard – Simplified Fork (Button + WS2812 Edition)
 
 This project is a simplified and hardware-oriented fork of the original PicoMemcard by Daniele Giuliani.
 
