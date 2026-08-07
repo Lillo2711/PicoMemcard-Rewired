@@ -209,7 +209,7 @@ SECTIONS
     {
         __end__ = .;
         end = __end__;
-        *(.heap*)
+        KEEP(*(.heap*))
         __HeapLimit = .;
     } > RAM
 
@@ -224,7 +224,7 @@ SECTIONS
      */
     .stack1_dummy (COPY):
     {
-        *(.stack1*)
+        KEEP(*(.stack1*))
     } > SCRATCH_X
     .stack_dummy (COPY):
     {

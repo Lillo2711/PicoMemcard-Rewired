@@ -16,6 +16,12 @@
     #define PIN_MOSI	    19
     #define PIN_SCK	        18
     #define PIN_BTN         3
+    #define PIN_DAT         5   // original PIN_DAT su Pi pico
+    #define PIN_CMD         6	// original PIN_CMD su Pi pico
+    #define PIN_SEL         7	// original PIN_SEL su Pi pico
+    #define PIN_CLK         8	// original PIN_CLK su Pi pico
+    #define PIN_ACK         9  // original PIN_ACK su Pi pico
+
 
     #ifdef SET_GP_LED
         #define PICO_LED_PIN SET_GP_LED
@@ -29,17 +35,17 @@
     #define PIN_SCK		    2
     #define PIN_MOSI	    3
     #define PIN_BTN         4
+    #define PIN_DAT 9   // original PIN_DAT su rp2040
+    #define PIN_CMD 10	// original PIN_CMD su rp2040
+    #define PIN_SEL 11	// original PIN_SEL su rp2040
+    #define PIN_CLK 12	// original PIN_CLK su rp2040
+    #define PIN_ACK 13  // original PIN_ACK su rp2040
 
     #ifdef SET_GP_LED
         #define PICO_LED_PIN SET_GP_LED
     #endif
 #endif
 
-#define PIN_DAT 5
-#define PIN_CMD PIN_DAT + 1		// must be immediately after PIN_DAT
-#define PIN_SEL PIN_CMD + 1		// must be immediately after PIN_CMD
-#define PIN_CLK PIN_SEL + 1		// must be immediately after PIN_SEL
-#define PIN_ACK 9
 
 /* SD Card Configuration */
 #define BLOCK_SIZE	512				// SD card communicate using only 512 block size for consistency
