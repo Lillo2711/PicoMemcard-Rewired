@@ -6,7 +6,7 @@ This project is a simple rewire , or maybe a Re-pinned version , of the project 
 it simply aim to take alberonisse project (Button + WS2812 Edition) and repinned it to comply with the original pin set from https://github.com/dangiu/PicoMemcard or simply dangiu's original project cause i have already my Pico mmc Board and i don't want to trash it my old PCB cause alberonisse like other pin instead the original.
 Before doing anything stupid check the wiring of your project if it comply with Dangiu's original schematic ,then remember it remove the controller combination and add a phisical button on pin 3 and pin Gnd for Raspberry pi pico , and pin 4 and pin Gnd for Rp2040.
 
-Below is the original document , i have to change the schematic to comply with the original by Dangiu.
+Below is the original document , i have changed the schematic to comply with the original by Dangiu.
 This project depends directly from the fork Modified and maintained by **Alber Multi House**.
 
 # PicoMemcard – Simplified Fork (Button + WS2812 Edition)
